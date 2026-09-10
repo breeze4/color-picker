@@ -4,18 +4,34 @@ A color palette tool with an artistic (RYB) color wheel, five shades per
 color, and a one-click Markdown export. It reproduces the color math of
 paletton.com without the ads.
 
+## Layout
+
+- `frontend/`: static HTML, CSS, and vanilla JavaScript ES modules. No
+  build step.
+- `backend/`: a FastAPI app that serves the frontend and a health
+  endpoint at `/api/health`.
+- `scripts/`: the dev server and the test gates.
+- `docs/`: the specification and lessons.
+
 ## Run
 
-To start the page, run the following command and open
-`http://localhost:8080`:
+To start the app with auto-reload, run the following command and open
+`http://127.0.0.1:8080`:
 
 ```
-pnpm start
+scripts/dev.sh
 ```
 
-The page is static HTML, CSS, and ES modules. Any static file server
-works. Opening `index.html` from the file system does not work because
-browsers block ES modules on `file://` URLs.
+The script creates `backend/.venv` with uv on the first run. Set `PORT`
+to use another port.
+
+## Test
+
+To run the backend and frontend tests, run:
+
+```
+scripts/ci-gates.sh
+```
 
 ## Use
 
@@ -24,33 +40,21 @@ browsers block ES modules on `file://` URLs.
    ring dot to set the angle between hues. Drag the complement dot to
    unlock **Free** mode, where every dot moves alone. Click a scheme
    button to lock the hues again.
-3. Drag the dots inside the wheel to set the five shades. The large dot
+3. Drag the numbered dots inside the wheel to set the five shades. Dot 0
    moves all five. Or pick a preset from the **Shades** list.
 4. Click **Export** and then **Copy** to get the palette as Markdown,
    CSS, or JSON. Click any swatch to copy its hex.
 
-The square above the swatches shows the scheme colors together, the
-same way the paletton.com preview does.
-
 The URL holds the whole palette. Copy the URL to save or share it.
 
-## Test
+## Hosting
 
-To run the unit tests, run:
+The backend is a standard ASGI app. To serve it under a path prefix
+behind a reverse proxy, set `PALETTE_WHEEL_ROOT_PATH` to that prefix.
+To serve the frontend from another directory, set
+`PALETTE_WHEEL_FRONTEND_DIR`. The frontend uses relative URLs, so it
+works at any prefix. Start it in production with:
 
 ```
-pnpm test
+python -m uvicorn main:app --app-dir backend --host 0.0.0.0 --port 8080
 ```
-
-The tests compare the wheel and shade math against values read from
-paletton.com.
-
-## Layout
-
-- `index.html`, `css/style.css`: the page.
-- `js/color.js`: RYB wheel math and conversions.
-- `js/presets.js`: the shade preset table.
-- `js/field.js`: geometry of the inner shade disc.
-- `js/palette.js`: scheme logic, export text, and URL state.
-- `js/app.js`: canvas drawing and UI events.
-- `docs/2026-09-10-01-spec.md`: the specification.

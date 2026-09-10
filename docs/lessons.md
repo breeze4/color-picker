@@ -14,6 +14,6 @@
   is the max and which is the min, handle ties by the max and min index
   and not by searching for a distinct middle value.
 - Lesson: Put every state change behind a pure function in
-  `js/palette.js` and keep `js/app.js` to events and drawing. Free mode
+  `frontend/js/palette.js` and keep `frontend/js/app.js` to events and drawing. Free mode
   went in as five pure functions with unit tests before the UI touched
   it.
