@@ -125,6 +125,18 @@ main {
   text-align: left;
 }
 .swatch:hover { outline: 2px solid #fff8; outline-offset: -2px; }
+.swatch.hot { outline: 3px solid var(--accent); outline-offset: -3px; }
+.swatch .idx {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-weight: 700;
+  font-size: 11px;
+  background: #000c;
+  color: #fff;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
 .swatch.copied::after {
   content: "copied";
   position: absolute;

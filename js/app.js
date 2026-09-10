@@ -110,6 +110,23 @@ function dot(x, y, r, fill, big) {
   ctx.stroke();
 }
 
+// Small number tag beside a dot. Matches the number on the swatches.
+function tag(x, y, text) {
+  ctx.font = 'bold 11px system-ui, sans-serif';
+  ctx.textBaseline = 'middle';
+  const w = ctx.measureText(text).width + 8;
+  const tx = x + 12, ty = y - 12;
+  ctx.fillStyle = '#000c';
+  ctx.beginPath();
+  ctx.roundRect(tx, ty - 8, w, 16, 4);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.fillText(text, tx + 4, ty + 0.5);
+}
+
+// Index of the inner dot under the pointer, or -1.
+let hotIndex = -1;
+
 function drawWheel() {
   ctx.clearRect(0, 0, SIZE, SIZE);
   ctx.drawImage(drawRing(), 0, 0);
@@ -136,6 +153,10 @@ function drawWheel() {
   for (let i = 4; i >= 0; i--) {
     const p = discPos(state.vals[i]);
     dot(p.x, p.y, i === 0 ? 11 : 7, toHex(shade(state.hue, ...state.vals[i]).rgb), i === 0);
+  }
+  for (let i = 0; i < 5; i++) {
+    const p = discPos(state.vals[i]);
+    tag(p.x, p.y, String(i));
   }
 }
 
@@ -194,12 +215,17 @@ function renderPalette() {
     row.appendChild(h2);
     const sw = document.createElement('div');
     sw.className = 'swatches';
-    c.shades.forEach((sh) => {
+    c.shades.forEach((sh, i) => {
       const b = document.createElement('button');
-      b.className = 'swatch';
+      b.className = 'swatch' + (i === hotIndex ? ' hot' : '');
+      b.dataset.idx = i;
       b.style.background = sh.hex;
       b.style.color = textOn(sh.rgb);
       b.textContent = sh.hex;
+      const idx = document.createElement('span');
+      idx.className = 'idx';
+      idx.textContent = i;
+      b.appendChild(idx);
       b.title = 'Click to copy';
       b.addEventListener('click', () => copyText(sh.hex, b));
       sw.appendChild(b);
@@ -292,19 +318,29 @@ canvas.addEventListener('pointerdown', (ev) => {
   ev.preventDefault();
   canvas.setPointerCapture(ev.pointerId);
   drag = { ...hit, start: cloneState(state), pointer: hit.kind === 'disc' ? limitToDisc(...Object.values(discPoint(x, y))) : null };
+  hotIndex = hit.kind === 'disc' ? hit.index : -1;
   moveDrag(x, y);
 });
 
 canvas.addEventListener('pointermove', (ev) => {
-  if (!drag) return;
   const { x, y } = canvasXY(ev);
-  moveDrag(x, y);
+  if (drag) return moveDrag(x, y);
+  const hit = hitTest(x, y);
+  const idx = hit && hit.kind === 'disc' && Math.hypot(discPos(state.vals[hit.index]).x - x, discPos(state.vals[hit.index]).y - y) <= 14 ? hit.index : -1;
+  if (idx !== hotIndex) { hotIndex = idx; setHot(); }
 });
+
+canvas.addEventListener('pointerleave', () => { if (!drag && hotIndex !== -1) { hotIndex = -1; setHot(); } });
+
+function setHot() {
+  document.querySelectorAll('.swatch').forEach((b) => b.classList.toggle('hot', Number(b.dataset.idx) === hotIndex));
+}
 
 function endDrag(ev) {
   if (!drag) return;
   const start = drag.start;
   drag = null;
+  hotIndex = -1;
   const end = state;
   state = start;
   commit(end);
