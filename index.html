@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Palette Wheel</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>Palette Wheel</h1>
+    <nav>
+      <button id="btn-undo" title="Undo">Undo</button>
+      <button id="btn-redo" title="Redo">Redo</button>
+      <button id="btn-random">Random</button>
+      <button id="btn-reset">Reset</button>
+      <button id="btn-export" class="primary">Export</button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="row schemes">
+        <button data-model="mono">Mono</button>
+        <button data-model="analog">Analog</button>
+        <button data-model="triad">Triad</button>
+        <button data-model="tetrad">Tetrad</button>
+        <label><input type="checkbox" id="chk-compl"> Add complement</label>
+      </div>
+
+      <canvas id="wheel" width="440" height="440"></canvas>
+      <p class="hint">Drag the outer dots to set hues. Drag the inner dots to set shades. The big inner dot moves all five.</p>
+
+      <div class="row">
+        <label>Hue <input type="number" id="in-hue" min="0" max="359" step="1"></label>
+        <label>Angle <input type="number" id="in-angle" min="5" max="175" step="1"></label>
+        <label>Base <input type="text" id="in-hex" spellcheck="false" maxlength="7"></label>
+      </div>
+      <div class="row">
+        <label>Shades <select id="sel-preset"></select></label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="strip" id="strip"></div>
+      <div class="palette" id="palette"></div>
+    </section>
+  </main>
+
+  <dialog id="export-dialog">
+    <div class="dialog-head">
+      <h2>Export palette</h2>
+      <div class="tabs">
+        <button data-format="markdown" class="active">Markdown</button>
+        <button data-format="css">CSS</button>
+        <button data-format="json">JSON</button>
+      </div>
+    </div>
+    <div class="dialog-body">
+      <textarea id="export-text" readonly spellcheck="false"></textarea>
+    </div>
+    <div class="dialog-foot">
+      <button id="btn-close">Close</button>
+      <button id="btn-copy" class="primary">Copy</button>
+    </div>
+  </dialog>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
