@@ -17,3 +17,7 @@
   `frontend/js/palette.js` and keep `frontend/js/app.js` to events and drawing. Free mode
   went in as five pure functions with unit tests before the UI touched
   it.
+- Lesson: When the user names a later step, such as a BeeBaby deploy,
+  read only enough of that contract to keep the layout compatible.
+  Stop before adding its files. Here that meant a health endpoint and a
+  root-path setting, not a Dockerfile or workflows.
