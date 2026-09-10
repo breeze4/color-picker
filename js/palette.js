@@ -2,7 +2,8 @@
 import { normHue, shade, toHex, rgbToHsl } from './color.js';
 import { presetValues, DEFAULT_PRESET, PRESETS } from './presets.js';
 
-export const MODELS = ['mono', 'analog', 'triad', 'tetrad'];
+export const MODELS = ['mono', 'analog', 'triad', 'tetrad', 'free'];
+export const SCHEME_MODELS = ['mono', 'analog', 'triad', 'tetrad'];
 export const MIN_ANGLE = 5;
 export const MAX_ANGLE = 175;
 
@@ -21,17 +22,25 @@ export function defaultState() {
     angle: 30,
     preset: DEFAULT_PRESET,
     vals: presetValues(DEFAULT_PRESET),
+    // Free mode only: absolute hues, or null when that color is absent.
+    hues: null,
   };
 }
 
 export function cloneState(s) {
-  return { ...s, vals: s.vals.map((v) => [...v]) };
+  return { ...s, vals: s.vals.map((v) => [...v]), hues: s.hues ? { ...s.hues } : null };
 }
 
 // The hues in the scheme, in display order.
 export function schemeHues(s) {
   const h = s.hue, a = s.angle;
   const out = [{ id: 'pri', hue: h }];
+  if (s.model === 'free') {
+    for (const id of ['sec1', 'sec2', 'compl']) {
+      if (s.hues?.[id] != null) out.push({ id, hue: normHue(s.hues[id]) });
+    }
+    return out;
+  }
   if (s.model === 'analog') {
     out.push({ id: 'sec1', hue: normHue(h + a) }, { id: 'sec2', hue: normHue(h - a) });
   } else if (s.model === 'triad') {
@@ -59,12 +68,60 @@ export function schemeColors(s) {
 // dots keep moving where the pointer goes.
 export function withAngle(s, angle) {
   const n = cloneState(s);
+  if (s.model === 'free') return n;
   angle = Math.abs(angle);
   if (angle > 90 && (s.model === 'analog' || s.model === 'triad')) {
     n.model = s.model === 'analog' ? 'triad' : 'analog';
     angle = 180 - angle;
   }
   n.angle = Math.round(Math.min(MAX_ANGLE, Math.max(MIN_ANGLE, angle)));
+  return n;
+}
+
+// Unlock the scheme: keep the hues where they are, then let each move alone.
+export function toFree(s) {
+  if (s.model === 'free') return cloneState(s);
+  const n = cloneState(s);
+  const cur = Object.fromEntries(schemeHues(s).map((c) => [c.id, c.hue]));
+  n.hues = { sec1: cur.sec1 ?? null, sec2: cur.sec2 ?? null, compl: cur.compl ?? null };
+  n.model = 'free';
+  return n;
+}
+
+// Lock back into a scheme. The free hues are dropped.
+export function toModel(s, model) {
+  const n = cloneState(s);
+  n.model = model;
+  n.hues = null;
+  return n;
+}
+
+// Set the base hue. In free mode the other hues turn with it.
+export function withHue(s, hue) {
+  const n = cloneState(s);
+  hue = normHue(Math.round(hue));
+  if (s.model === 'free') {
+    const d = hue - s.hue;
+    for (const id of Object.keys(n.hues)) {
+      if (n.hues[id] != null) n.hues[id] = normHue(n.hues[id] + d);
+    }
+  }
+  n.hue = hue;
+  return n;
+}
+
+// Free mode: move one hue. Outside free mode this unlocks first.
+export function withFreeHue(s, id, hue) {
+  const n = toFree(s);
+  n.hues[id] = normHue(Math.round(hue));
+  return n;
+}
+
+// Add or remove the complement.
+export function withCompl(s, on) {
+  const n = cloneState(s);
+  n.compl = on;
+  if (s.model === 'free') n.hues.compl = on ? (s.hues.compl ?? normHue(s.hue + 180)) : null;
   return n;
 }
 
@@ -89,7 +146,9 @@ export function exportMarkdown(s, url) {
   const colors = schemeColors(s);
   const model = s.model[0].toUpperCase() + s.model.slice(1);
   const out = ['# Color palette', ''];
-  out.push(`Scheme: ${model}${s.compl && s.model !== 'tetrad' ? ' + complement' : ''} · Base hue: ${s.hue}° · Angle: ${s.angle}° · Shades: ${s.preset}`);
+  const angle = s.model === 'free' || s.model === 'mono' ? '' : ` · Angle: ${s.angle}°`;
+  const compl = s.compl && s.model !== 'tetrad' && s.model !== 'free' ? ' + complement' : '';
+  out.push(`Scheme: ${model}${compl} · Base hue: ${s.hue}°${angle} · Shades: ${s.preset}`);
   if (url) out.push('', `Edit: ${url}`);
   for (const c of colors) {
     out.push('', `## ${c.label}`, '', '| Shade | Hex | RGB | HSL |', '| --- | --- | --- | --- |');
@@ -117,7 +176,8 @@ export function exportJson(s) {
 // URL hash <-> state.
 export function stateToHash(s) {
   const v = s.vals.map(([a, b]) => `${a},${b}`).join(';');
-  return `#h=${s.hue}&m=${s.model}&c=${s.compl ? 1 : 0}&a=${s.angle}&p=${s.preset}&v=${v}`;
+  const f = s.model === 'free' ? `&f=${['sec1', 'sec2', 'compl'].map((id) => s.hues[id] ?? '_').join(',')}` : '';
+  return `#h=${s.hue}&m=${s.model}&c=${s.compl ? 1 : 0}&a=${s.angle}&p=${s.preset}${f}&v=${v}`;
 }
 
 export function hashToState(hash) {
@@ -132,6 +192,12 @@ export function hashToState(hash) {
   s.angle = Math.round(num('a', MIN_ANGLE, MAX_ANGLE, 30));
   s.model = MODELS.includes(q.get('m')) ? q.get('m') : 'mono';
   s.compl = q.get('c') === '1';
+  if (s.model === 'free') {
+    const f = (q.get('f') ?? '').split(',');
+    const hue = (t) => (t === '_' || t === '' || !Number.isFinite(Number(t)) ? null : normHue(Math.round(Number(t))));
+    s.hues = { sec1: hue(f[0]), sec2: hue(f[1]), compl: hue(f[2]) };
+    s.compl = s.hues.compl != null;
+  }
   s.preset = PRESETS[q.get('p')] ? q.get('p') : 'custom';
   const v = (q.get('v') ?? '').split(';').map((p) => p.split(',').map(Number));
   if (v.length === 5 && v.every((p) => p.length === 2 && p.every((n) => Number.isFinite(n) && n >= 0 && n <= 2))) {

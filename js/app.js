@@ -2,8 +2,8 @@ import { normHue, shade, toHex, fromHex, rgbToHsv, baseByHue, kFor, textOn } fro
 import { PRESETS, presetValues } from './presets.js';
 import { valToPoint, pointToVal, limitToDisc } from './field.js';
 import {
-  MODELS, defaultState, cloneState, schemeHues, schemeColors, withAngle,
-  exportMarkdown, exportCss, exportJson, stateToHash, hashToState, MIN_ANGLE, MAX_ANGLE,
+  SCHEME_MODELS, defaultState, cloneState, schemeHues, schemeColors, withAngle,
+  toFree, toModel, withHue, withFreeHue, withCompl, exportMarkdown, exportCss, exportJson, stateToHash, hashToState, MIN_ANGLE, MAX_ANGLE,
 } from './palette.js';
 
 // ---------- state and history ----------
@@ -236,7 +236,7 @@ function renderControls() {
   chk.disabled = state.model === 'tetrad';
   if (document.activeElement !== $('in-hue')) $('in-hue').value = state.hue;
   const ang = $('in-angle');
-  ang.disabled = state.model === 'mono';
+  ang.disabled = state.model === 'mono' || state.model === 'free';
   if (document.activeElement !== ang) ang.value = state.angle;
   if (document.activeElement !== $('in-hex')) $('in-hex').value = toHex(shade(state.hue, ...state.vals[0]).rgb);
   $('sel-preset').value = state.preset;
@@ -316,10 +316,10 @@ function moveDrag(x, y) {
   const n = cloneState(state);
   if (drag.kind === 'ring') {
     const h = hueAt(x, y);
-    if (drag.id === 'pri') n.hue = h;
-    else if (drag.id === 'compl') n.hue = normHue(h - 180);
-    else return preview(withAngle(n, angleFromPointer(drag.id, h)));
-    return preview(n);
+    if (drag.id === 'pri') return preview(withHue(state, h));
+    // The complement dot, or any dot in free mode, moves alone.
+    if (drag.id === 'compl' || state.model === 'free') return preview(withFreeHue(state, drag.id, h));
+    return preview(withAngle(n, angleFromPointer(drag.id, h)));
   }
   const p = limitToDisc(...Object.values(discPoint(x, y)));
   if (drag.index === 0) {
@@ -339,29 +339,22 @@ function moveDrag(x, y) {
 // ---------- control events ----------
 document.querySelectorAll('[data-model]').forEach((b) => {
   b.addEventListener('click', () => {
-    const n = cloneState(state);
-    n.model = b.dataset.model;
-    commit(n);
+    const m = b.dataset.model;
+    commit(m === 'free' ? toFree(state) : toModel(state, m));
   });
 });
 
-$('chk-compl').addEventListener('change', (ev) => {
-  const n = cloneState(state);
-  n.compl = ev.target.checked;
-  commit(n);
-});
+$('chk-compl').addEventListener('change', (ev) => commit(withCompl(state, ev.target.checked)));
 
 $('in-hue').addEventListener('change', (ev) => {
   const v = Number(ev.target.value);
   if (!Number.isFinite(v)) return;
-  const n = cloneState(state);
-  n.hue = normHue(Math.round(v));
-  commit(n);
+  commit(withHue(state, v));
 });
 
 $('in-angle').addEventListener('change', (ev) => {
   const v = Number(ev.target.value);
-  if (!Number.isFinite(v)) return;
+  if (!Number.isFinite(v) || state.model === 'free') return;
   commit(withAngle(state, Math.min(MAX_ANGLE, Math.max(MIN_ANGLE, v))));
 });
 
@@ -371,8 +364,7 @@ $('in-hex').addEventListener('change', (ev) => {
   const rgb = fromHex(ev.target.value);
   if (!rgb) { ev.target.value = toHex(shade(state.hue, ...state.vals[0]).rgb); return; }
   const hsv = rgbToHsv(rgb);
-  const n = cloneState(state);
-  n.hue = Math.round(hsv.h);
+  const n = withHue(state, hsv.h);
   const base = baseByHue(n.hue);
   const round = (n) => Math.round(Math.min(2, n) * 1e5) / 1e5;
   const target = [round(kFor(base.s, hsv.s)), round(kFor(base.v, hsv.v))];
@@ -427,7 +419,8 @@ $('btn-reset').addEventListener('click', () => commit(defaultState()));
 $('btn-random').addEventListener('click', () => {
   const n = cloneState(state);
   n.hue = Math.floor(Math.random() * 360);
-  n.model = MODELS[Math.floor(Math.random() * MODELS.length)];
+  n.model = SCHEME_MODELS[Math.floor(Math.random() * SCHEME_MODELS.length)];
+  n.hues = null;
   n.compl = Math.random() < 0.4;
   n.angle = 15 + Math.floor(Math.random() * 46);
   const names = Object.keys(PRESETS);

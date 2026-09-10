@@ -48,3 +48,41 @@ test('five shades per color', () => {
     assert.match(c.shades[0].hex, /^#[0-9a-f]{6}$/);
   }
 });
+
+test('free mode keeps the hues and lets each move alone', async () => {
+  const { toFree, toModel, withHue, withFreeHue, withCompl } = await import('../js/palette.js');
+  const s = { ...defaultState(), hue: 10, angle: 30, model: 'triad' };
+  const f = toFree(s);
+  assert.equal(f.model, 'free');
+  assert.deepEqual(f.hues, { sec1: 220, sec2: 160, compl: null });
+  assert.deepEqual(schemeHues(f).map((c) => c.hue), [10, 220, 160]);
+  // one hue moves alone
+  const m = withFreeHue(f, 'sec1', 300);
+  assert.deepEqual(schemeHues(m).map((c) => c.hue), [10, 300, 160]);
+  // dragging the complement from a locked scheme unlocks it
+  const c = withFreeHue({ ...s, compl: true }, 'compl', 200);
+  assert.equal(c.model, 'free');
+  assert.deepEqual(schemeHues(c).map((c) => c.hue), [10, 220, 160, 200]);
+  // the base hue turns everything
+  const r = withHue(c, 20);
+  assert.deepEqual(schemeHues(r).map((c) => c.hue), [20, 230, 170, 210]);
+  // complement toggle in free mode
+  assert.equal(schemeHues(withCompl(c, false)).length, 3);
+  assert.equal(schemeHues(withCompl(withCompl(c, false), true)).at(-1).hue, 190);
+  // a scheme button locks it again
+  const back = toModel(c, 'mono');
+  assert.equal(back.model, 'mono');
+  assert.equal(back.hues, null);
+  assert.deepEqual(schemeHues(back).map((c) => c.hue), [10, 190]);
+  // angle changes do nothing in free mode
+  assert.equal(withAngle(c, 80).model, 'free');
+});
+
+test('free mode hash round trip', async () => {
+  const { toFree } = await import('../js/palette.js');
+  const f = toFree({ ...defaultState(), hue: 10, model: 'analog', compl: true });
+  f.hues.sec2 = null;
+  const back = hashToState(stateToHash(f));
+  assert.deepEqual(back, f);
+  assert.match(stateToHash(f), /&f=40,_,190&/);
+});

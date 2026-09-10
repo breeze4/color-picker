@@ -21,7 +21,9 @@ browsers block ES modules on `file://` URLs.
 
 1. Click a scheme: **Mono**, **Analog**, **Triad**, or **Tetrad**.
 2. Drag the large dot on the outer ring to set the base hue. Drag a small
-   ring dot to set the angle between hues.
+   ring dot to set the angle between hues. Drag the complement dot to
+   unlock **Free** mode, where every dot moves alone. Click a scheme
+   button to lock the hues again.
 3. Drag the dots inside the wheel to set the five shades. The large dot
    moves all five. Or pick a preset from the **Shades** list.
 4. Click **Export** and then **Copy** to get the palette as Markdown,
