@@ -1,0 +1,7 @@
+# The listener inside the color-picker container. Caddy orders respond before
+# file_server, so /health answers 200 and every other path reads a file.
+:8080 {
+  root * /srv
+  respond /health 200
+  file_server
+}

@@ -1,0 +1,9 @@
+.env
+.git
+.github
+.vscode
+.DS_Store
+docs
+scripts
+node_modules
+**/node_modules

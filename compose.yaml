@@ -1,0 +1,22 @@
+# The target stack for color-picker. The deployment command reads this file from
+# the deployed commit, resets every published port, and joins the service to the
+# beebaby-edge network, so this file declares no port and no network.
+#
+# IMAGE_DIGEST comes from the protected deployment environment file at
+# /srv/beebaby/secrets/deploy-env/color-picker.env. A static site holds no
+# runtime secret and binds no host directory.
+services:
+  color-picker:
+    image: ${IMAGE_DIGEST:?Set IMAGE_DIGEST}
+    init: true
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /config
+      - /data
+      - /tmp
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/health"]
