@@ -268,8 +268,17 @@ dialog::backdrop { background: #000a; }
 
   main { display: flex; flex-direction: column; gap: 0; padding: 0 16px 32px; }
   .panel { display: contents; }
-  .schemes { order: 1; padding-top: 12px; margin-bottom: 4px; flex-wrap: nowrap; overflow-x: auto; }
-  .schemes label { white-space: nowrap; }
+  .schemes {
+    order: 1;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    padding-top: 12px;
+    margin-bottom: 4px;
+    overflow: visible;
+  }
+  .schemes button { min-width: 0; padding: 6px 2px; font-size: 13px; }
+  .schemes label { grid-column: 1 / -1; white-space: nowrap; padding-top: 2px; }
   #wheel { order: 2; margin: 8px auto 16px; }
   .hint { display: none; }
   .preview { order: 4; max-width: none; margin: 0 0 12px; }
