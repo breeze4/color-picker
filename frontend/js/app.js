@@ -318,7 +318,7 @@ function renderControls() {
   if (document.activeElement !== ang) ang.value = state.angle;
   const act = activeColor();
   if (document.activeElement !== $('in-hex')) $('in-hex').value = toHex(shade(act.hue, ...valsFor(state, act.id)[0]).rgb);
-  $('sel-preset').value = state.preset;
+  renderPreset();
   $('btn-undo').disabled = undo.length === 0;
   $('btn-redo').disabled = redo.length === 0;
 }
@@ -485,22 +485,79 @@ $('in-hex').addEventListener('change', (ev) => {
   commit(next);
 });
 
-const sel = $('sel-preset');
-for (const name of Object.keys(PRESETS)) {
-  const o = document.createElement('option');
-  o.value = name;
-  o.textContent = name;
-  sel.appendChild(o);
+// ---------- shade preset picker ----------
+// A button that shows the current preset as five blocks in the active
+// hue, and a menu that shows every preset the same way.
+const presetBtn = $('btn-preset');
+const presetMenu = $('preset-menu');
+
+function blocks(hue, vals) {
+  const el = document.createElement('span');
+  el.className = 'blocks';
+  for (const [kS, kV] of vals) {
+    const b = document.createElement('span');
+    b.style.background = toHex(shade(hue, kS, kV).rgb);
+    el.appendChild(b);
+  }
+  return el;
 }
-const custom = document.createElement('option');
-custom.value = 'custom';
-custom.textContent = 'custom';
-sel.appendChild(custom);
-sel.addEventListener('change', () => {
-  if (sel.value === 'custom') return;
-  const n = withVals(state, activeColor().id, presetValues(sel.value));
-  n.preset = sel.value;
+
+function presetRow(name, hue, vals) {
+  const row = document.createElement('button');
+  row.type = 'button';
+  row.setAttribute('role', 'option');
+  row.dataset.preset = name;
+  row.appendChild(blocks(hue, vals));
+  const label = document.createElement('span');
+  label.className = 'name';
+  label.textContent = name;
+  row.appendChild(label);
+  return row;
+}
+
+function renderPreset() {
+  const act = activeColor();
+  presetBtn.innerHTML = '';
+  presetBtn.appendChild(blocks(act.hue, valsFor(state, act.id)));
+  const label = document.createElement('span');
+  label.className = 'name';
+  label.textContent = state.preset;
+  presetBtn.appendChild(label);
+  if (presetMenu.hidden) return;
+  presetMenu.innerHTML = '';
+  for (const name of Object.keys(PRESETS)) {
+    const row = presetRow(name, act.hue, PRESETS[name]);
+    row.classList.toggle('active', name === state.preset);
+    presetMenu.appendChild(row);
+  }
+}
+
+function openPresetMenu(open) {
+  presetMenu.hidden = !open;
+  presetBtn.setAttribute('aria-expanded', String(open));
+  if (open) {
+    renderPreset();
+    (presetMenu.querySelector('.active') ?? presetMenu.firstElementChild)?.focus();
+  }
+}
+
+presetBtn.addEventListener('click', () => openPresetMenu(presetMenu.hidden));
+presetMenu.addEventListener('click', (ev) => {
+  const row = ev.target.closest('[data-preset]');
+  if (!row) return;
+  const n = withVals(state, activeColor().id, presetValues(row.dataset.preset));
+  n.preset = row.dataset.preset;
+  openPresetMenu(false);
   commit(n);
+});
+// Opening rebuilds the button, so a click target can be detached by the
+// time the document sees it. Stop clicks inside the picker here instead.
+presetBtn.closest('.preset-picker').addEventListener('click', (ev) => ev.stopPropagation());
+document.addEventListener('click', () => {
+  if (!presetMenu.hidden) openPresetMenu(false);
+});
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && !presetMenu.hidden) { openPresetMenu(false); presetBtn.focus(); }
 });
 
 $('btn-undo').addEventListener('click', () => {

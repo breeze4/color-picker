@@ -38,7 +38,11 @@
         <label>Base <input type="text" id="in-hex" spellcheck="false" maxlength="7"></label>
       </div>
       <div class="row">
-        <label>Shades <select id="sel-preset"></select></label>
+        <span class="lbl">Shades</span>
+        <span class="preset-picker">
+          <button type="button" id="btn-preset" aria-haspopup="listbox" aria-expanded="false" aria-label="Shade preset"></button>
+          <div id="preset-menu" class="preset-menu" role="listbox" hidden></div>
+        </span>
       </div>
     </section>
 

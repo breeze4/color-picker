@@ -80,9 +80,44 @@ main {
   margin-bottom: 12px;
 }
 
-.row label { color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.row label, .row .lbl { color: var(--muted); display: flex; align-items: center; gap: 6px; }
 .row input[type="number"] { width: 72px; }
 .row input[type="text"] { width: 100px; font-family: ui-monospace, Menlo, monospace; }
+
+.preset-picker { position: relative; display: inline-block; }
+#btn-preset { display: flex; align-items: center; gap: 10px; min-width: 240px; color: var(--text); }
+#btn-preset::after { content: "▾"; margin-left: auto; color: var(--muted); }
+.blocks { display: flex; gap: 2px; }
+.blocks span { width: 16px; height: 16px; border-radius: 3px; display: block; }
+.preset-menu {
+  position: absolute;
+  z-index: 5;
+  bottom: calc(100% + 4px);
+  left: 0;
+  min-width: 260px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 8px 24px #0008;
+}
+.preset-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  background: none;
+  border-radius: 6px;
+  padding: 6px 8px;
+  text-align: left;
+  color: var(--text);
+}
+.preset-menu button:hover, .preset-menu button:focus { background: var(--line); outline: none; }
+.preset-menu button.active { color: var(--accent); }
+.preset-menu .name { flex: 1; }
 
 .schemes button { min-width: 72px; }
 
