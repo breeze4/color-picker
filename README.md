@@ -4,6 +4,9 @@ A color palette tool with an artistic (RYB) color wheel, five shades per
 color, and a one-click Markdown export. It reproduces the color math of
 paletton.com without the ads.
 
+The frontend is live at https://breeze4.github.io/color-picker/ and
+updates on every push to `main`.
+
 ## Layout
 
 - `frontend/`: static HTML, CSS, and vanilla JavaScript ES modules. No
