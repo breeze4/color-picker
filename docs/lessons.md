@@ -21,3 +21,7 @@
   read only enough of that contract to keep the layout compatible.
   Stop before adding its files. Here that meant a health endpoint and a
   root-path setting, not a Dockerfile or workflows.
+- Lesson: Never stop a process by name pattern. A `pkill -f` on the app
+  name killed the user's own reload server. Start test servers on a
+  port the user does not use, keep the process ID, and stop only that
+  ID. A reload server does not need a restart after edits.
