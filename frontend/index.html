@@ -9,11 +9,16 @@
 <body>
   <header>
     <h1>Palette Wheel</h1>
-    <nav>
-      <button id="btn-undo" title="Undo">Undo</button>
-      <button id="btn-redo" title="Redo">Redo</button>
-      <button id="btn-random">Random</button>
-      <button id="btn-reset">Reset</button>
+    <nav id="nav">
+      <button id="btn-more" class="more" aria-label="More actions" aria-expanded="false">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="4" cy="10" r="1"></circle><circle cx="10" cy="10" r="1"></circle><circle cx="16" cy="10" r="1"></circle></svg>
+      </button>
+      <div class="nav-extra" id="nav-extra">
+        <button id="btn-undo" title="Undo">Undo</button>
+        <button id="btn-redo" title="Redo">Redo</button>
+        <button id="btn-random">Random</button>
+        <button id="btn-reset">Reset</button>
+      </div>
       <button id="btn-export" class="primary">Export</button>
     </nav>
   </header>
@@ -32,17 +37,20 @@
       <canvas id="wheel" width="486" height="486"></canvas>
       <p class="hint">Drag the outer dots to set hues. Drag the complement dot to unlock Free mode. The chips above the inner disc pick which color the five shade dots edit. Drag the inner dots to set shades. The big inner dot moves all five.</p>
 
-      <div class="row">
-        <label>Hue <input type="number" id="in-hue" min="0" max="359" step="1"></label>
-        <label>Angle <input type="number" id="in-angle" min="5" max="175" step="1"></label>
-        <label>Base <input type="text" id="in-hex" spellcheck="false" maxlength="7"></label>
-      </div>
-      <div class="row">
-        <span class="lbl">Shades</span>
-        <span class="preset-picker">
-          <button type="button" id="btn-preset" aria-haspopup="listbox" aria-expanded="false" aria-label="Shade preset"></button>
-          <div id="preset-menu" class="preset-menu" role="listbox" hidden></div>
-        </span>
+      <div class="tune">
+        <h2 class="tune-label">Fine-tune</h2>
+        <div class="row">
+          <label>Hue <input type="number" id="in-hue" min="0" max="359" step="1"></label>
+          <label>Angle <input type="number" id="in-angle" min="5" max="175" step="1"></label>
+          <label>Base <input type="text" id="in-hex" spellcheck="false" maxlength="7"></label>
+        </div>
+        <div class="row">
+          <span class="lbl">Shades</span>
+          <span class="preset-picker">
+            <button type="button" id="btn-preset" aria-haspopup="listbox" aria-expanded="false" aria-label="Shade preset"></button>
+            <div id="preset-menu" class="preset-menu" role="listbox" hidden></div>
+          </span>
+        </div>
       </div>
     </section>
 

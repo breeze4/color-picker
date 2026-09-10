@@ -35,9 +35,13 @@ header h1 {
   letter-spacing: 0.02em;
 }
 
-header nav { display: flex; gap: 8px; flex-wrap: wrap; }
+header nav { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; position: relative; }
+.nav-extra { display: flex; gap: 8px; }
+button.more { display: none; width: 40px; height: 40px; padding: 0; align-items: center; justify-content: center; }
+.tune-label { display: none; }
 
 button, select, input[type="text"], input[type="number"] {
+  min-height: 40px;
   font: inherit;
   color: var(--text);
   background: var(--panel-2);
@@ -64,6 +68,7 @@ main {
 @media (max-width: 960px) {
   main { grid-template-columns: 1fr; }
 }
+
 
 .panel {
   background: var(--panel);
@@ -237,4 +242,43 @@ dialog::backdrop { background: #000a; }
   gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid var(--line);
+}
+
+/* Phones: one column in the order wheel, palette together, fine-tune, rows. */
+@media (max-width: 640px) {
+  header { padding: 12px 16px; }
+  button.more { display: flex; }
+  .nav-extra {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 6;
+    flex-direction: column;
+    min-width: 160px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 8px 24px #0008;
+  }
+  .nav-extra button { border: 0; background: none; text-align: left; padding: 10px 12px; }
+  .nav-extra button:hover { background: var(--line); }
+  nav.open .nav-extra { display: flex; }
+
+  main { display: flex; flex-direction: column; gap: 0; padding: 0 16px 32px; }
+  .panel { display: contents; }
+  .schemes { order: 1; padding-top: 12px; margin-bottom: 4px; flex-wrap: nowrap; overflow-x: auto; }
+  .schemes label { white-space: nowrap; }
+  #wheel { order: 2; margin: 8px auto 16px; }
+  .hint { display: none; }
+  .preview { order: 4; max-width: none; margin: 0 0 12px; }
+  .strip { order: 5; margin-bottom: 20px; }
+  .tune { order: 6; }
+  .tune-label { display: block; margin: 0 0 8px; font-size: 12px; color: var(--muted); font-weight: 500; }
+  .palette { order: 7; margin-top: 8px; }
+  .swatches { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .swatch { font-size: 11px; padding: 6px 5px; height: 56px; }
+  #btn-preset { min-width: 0; flex: 1; }
+  .preset-menu { min-width: 0; width: 100%; }
 }

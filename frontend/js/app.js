@@ -337,18 +337,25 @@ function canvasXY(ev) {
   return { x: ((ev.clientX - r.left) / r.width) * SIZE, y: ((ev.clientY - r.top) / r.height) * SIZE };
 }
 
+// Hit radii are in canvas units. On a small screen the canvas is scaled
+// down, so widen them to keep about the same size under the finger.
+function hitScale() {
+  return Math.max(1, SIZE / canvas.getBoundingClientRect().width);
+}
+
 function hitTest(x, y) {
+  const k = hitScale();
   for (const ch of chipPositions()) {
-    if (Math.hypot(ch.x - x, ch.y - y) <= CHIP_R + 4) return { kind: 'chip', id: ch.id };
+    if (Math.hypot(ch.x - x, ch.y - y) <= (CHIP_R + 4) * k) return { kind: 'chip', id: ch.id };
   }
   const vals = valsFor(state, activeColor().id);
   for (let i = 0; i < 5; i++) {
     const p = discPos(vals[i]);
-    if (Math.hypot(p.x - x, p.y - y) <= (i === 0 ? 14 : 10)) return { kind: 'disc', index: i };
+    if (Math.hypot(p.x - x, p.y - y) <= (i === 0 ? 14 : 10) * k) return { kind: 'disc', index: i };
   }
   for (const h of schemeHues(state)) {
     const p = posOnRing(h.hue);
-    if (Math.hypot(p.x - x, p.y - y) <= 14) return { kind: 'ring', id: h.id };
+    if (Math.hypot(p.x - x, p.y - y) <= 14 * k) return { kind: 'ring', id: h.id };
   }
   const r = Math.hypot(x - C, y - C);
   if (r >= R_IN && r <= R_OUT) return { kind: 'ring', id: 'pri' };
@@ -577,6 +584,17 @@ $('btn-redo').addEventListener('click', () => {
 });
 
 $('btn-reset').addEventListener('click', () => commit(defaultState()));
+
+// Phone header: the overflow button shows the extra actions.
+const nav = $('nav');
+$('btn-more').addEventListener('click', (ev) => {
+  ev.stopPropagation();
+  const open = !nav.classList.contains('open');
+  nav.classList.toggle('open', open);
+  $('btn-more').setAttribute('aria-expanded', String(open));
+});
+$('nav-extra').addEventListener('click', () => nav.classList.remove('open'));
+document.addEventListener('click', () => nav.classList.remove('open'));
 
 $('btn-random').addEventListener('click', () => {
   const n = cloneState(state);
