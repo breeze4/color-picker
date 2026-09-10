@@ -3,7 +3,7 @@ import { PRESETS, presetValues } from './presets.js';
 import { valToPoint, pointToVal, limitToDisc } from './field.js';
 import {
   SCHEME_MODELS, defaultState, cloneState, schemeHues, schemeColors, withAngle,
-  toFree, toModel, withHue, withFreeHue, withCompl, exportMarkdown, exportCss, exportJson, stateToHash, hashToState, MIN_ANGLE, MAX_ANGLE,
+  toFree, toModel, withHue, withFreeHue, withCompl, valsFor, withVals, exportMarkdown, exportCss, exportJson, stateToHash, hashToState, MIN_ANGLE, MAX_ANGLE,
 } from './palette.js';
 
 // ---------- state and history ----------
@@ -127,10 +127,23 @@ function tag(x, y, text) {
 // Index of the inner dot under the pointer, or -1.
 let hotIndex = -1;
 
+// The color that the inner disc edits. Falls back to the primary when
+// that color leaves the scheme.
+let active = 'pri';
+
+function activeColor() {
+  const hues = schemeHues(state);
+  const c = hues.find((h) => h.id === active) ?? hues[0];
+  active = c.id;
+  return c;
+}
+
 function drawWheel() {
   ctx.clearRect(0, 0, SIZE, SIZE);
   ctx.drawImage(drawRing(), 0, 0);
-  const disc = drawDisc(state.hue);
+  const act = activeColor();
+  const vals = valsFor(state, act.id);
+  const disc = drawDisc(act.hue);
   ctx.drawImage(disc, C - disc.width / 2, C - disc.height / 2);
 
   // Lines from the center to each hue on the ring.
@@ -145,17 +158,24 @@ function drawWheel() {
     ctx.stroke();
   }
 
-  const main = state.vals[0];
   for (const h of [...hues].reverse()) {
     const p = posOnRing(h.hue);
+    const main = valsFor(state, h.id)[0];
     dot(p.x, p.y, h.id === 'pri' ? 12 : 9, toHex(shade(h.hue, main[0], main[1]).rgb), h.id === 'pri');
+    if (h.id === act.id && state.model === 'free') {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, (h.id === 'pri' ? 12 : 9) + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = '#e0b34a';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
   }
   for (let i = 4; i >= 0; i--) {
-    const p = discPos(state.vals[i]);
-    dot(p.x, p.y, i === 0 ? 11 : 7, toHex(shade(state.hue, ...state.vals[i]).rgb), i === 0);
+    const p = discPos(vals[i]);
+    dot(p.x, p.y, i === 0 ? 11 : 7, toHex(shade(act.hue, ...vals[i]).rgb), i === 0);
   }
   for (let i = 0; i < 5; i++) {
-    const p = discPos(state.vals[i]);
+    const p = discPos(vals[i]);
     tag(p.x, p.y, String(i));
   }
 }
@@ -209,9 +229,11 @@ function renderPalette() {
   pal.innerHTML = '';
   for (const c of colors) {
     const row = document.createElement('div');
-    row.className = 'color-row';
+    row.className = 'color-row' + (c.id === active ? ' active' : '');
     const h2 = document.createElement('h2');
     h2.textContent = `${c.label} · ${c.hue}°`;
+    h2.title = state.model === 'free' ? 'Click to edit this color\'s shades' : 'Click to show this hue in the wheel';
+    h2.addEventListener('click', () => { active = c.id; render(); });
     row.appendChild(h2);
     const sw = document.createElement('div');
     sw.className = 'swatches';
@@ -264,7 +286,8 @@ function renderControls() {
   const ang = $('in-angle');
   ang.disabled = state.model === 'mono' || state.model === 'free';
   if (document.activeElement !== ang) ang.value = state.angle;
-  if (document.activeElement !== $('in-hex')) $('in-hex').value = toHex(shade(state.hue, ...state.vals[0]).rgb);
+  const act = activeColor();
+  if (document.activeElement !== $('in-hex')) $('in-hex').value = toHex(shade(act.hue, ...valsFor(state, act.id)[0]).rgb);
   $('sel-preset').value = state.preset;
   $('btn-undo').disabled = undo.length === 0;
   $('btn-redo').disabled = redo.length === 0;
@@ -285,8 +308,9 @@ function canvasXY(ev) {
 }
 
 function hitTest(x, y) {
+  const vals = valsFor(state, activeColor().id);
   for (let i = 0; i < 5; i++) {
-    const p = discPos(state.vals[i]);
+    const p = discPos(vals[i]);
     if (Math.hypot(p.x - x, p.y - y) <= (i === 0 ? 14 : 10)) return { kind: 'disc', index: i };
   }
   for (const h of schemeHues(state)) {
@@ -319,6 +343,7 @@ canvas.addEventListener('pointerdown', (ev) => {
   canvas.setPointerCapture(ev.pointerId);
   drag = { ...hit, start: cloneState(state), pointer: hit.kind === 'disc' ? limitToDisc(...Object.values(discPoint(x, y))) : null };
   hotIndex = hit.kind === 'disc' ? hit.index : -1;
+  if (hit.kind === 'ring') active = hit.id;
   moveDrag(x, y);
 });
 
@@ -326,7 +351,8 @@ canvas.addEventListener('pointermove', (ev) => {
   const { x, y } = canvasXY(ev);
   if (drag) return moveDrag(x, y);
   const hit = hitTest(x, y);
-  const idx = hit && hit.kind === 'disc' && Math.hypot(discPos(state.vals[hit.index]).x - x, discPos(state.vals[hit.index]).y - y) <= 14 ? hit.index : -1;
+  const av = valsFor(state, activeColor().id);
+  const idx = hit && hit.kind === 'disc' && Math.hypot(discPos(av[hit.index]).x - x, discPos(av[hit.index]).y - y) <= 14 ? hit.index : -1;
   if (idx !== hotIndex) { hotIndex = idx; setHot(); }
 });
 
@@ -358,18 +384,21 @@ function moveDrag(x, y) {
     return preview(withAngle(n, angleFromPointer(drag.id, h)));
   }
   const p = limitToDisc(...Object.values(discPoint(x, y)));
+  const id = activeColor().id;
+  const vals = valsFor(state, id).map((v) => [...v]);
   if (drag.index === 0) {
     const dx = p.x - drag.pointer.x, dy = p.y - drag.pointer.y;
     drag.pointer = p;
-    n.vals = state.vals.map((v) => {
+    vals.forEach((v, i) => {
       const q = valToPoint(v);
-      return pointToVal({ x: q.x + dx, y: q.y + dy });
+      vals[i] = pointToVal({ x: q.x + dx, y: q.y + dy });
     });
   } else {
-    n.vals[drag.index] = pointToVal(p);
+    vals[drag.index] = pointToVal(p);
   }
-  n.preset = 'custom';
-  preview(n);
+  const next = withVals(state, id, vals);
+  next.preset = 'custom';
+  preview(next);
 }
 
 // ---------- control events ----------
@@ -397,22 +426,26 @@ $('in-angle').addEventListener('change', (ev) => {
 // Typing a hex sets the hue and moves the main shade dot onto that
 // color. The other four dots keep their offset from the main dot.
 $('in-hex').addEventListener('change', (ev) => {
+  const act = activeColor();
+  const cur = valsFor(state, act.id);
   const rgb = fromHex(ev.target.value);
-  if (!rgb) { ev.target.value = toHex(shade(state.hue, ...state.vals[0]).rgb); return; }
+  if (!rgb) { ev.target.value = toHex(shade(act.hue, ...cur[0]).rgb); return; }
   const hsv = rgbToHsv(rgb);
-  const n = withHue(state, hsv.h);
-  const base = baseByHue(n.hue);
+  const hue = Math.round(hsv.h);
+  const n = act.id === 'pri' ? withHue(state, hue) : withFreeHue(state, act.id, hue);
+  const base = baseByHue(hue);
   const round = (n) => Math.round(Math.min(2, n) * 1e5) / 1e5;
   const target = [round(kFor(base.s, hsv.s)), round(kFor(base.v, hsv.v))];
-  const from = valToPoint(state.vals[0]);
+  const from = valToPoint(cur[0]);
   const to = valToPoint(target);
-  n.vals = state.vals.map((v, i) => {
+  const vals = cur.map((v, i) => {
     if (i === 0) return target;
     const q = valToPoint(v);
     return pointToVal({ x: q.x + to.x - from.x, y: q.y + to.y - from.y });
   });
-  n.preset = 'custom';
-  commit(n);
+  const next = withVals(n, act.id, vals);
+  next.preset = 'custom';
+  commit(next);
 });
 
 const sel = $('sel-preset');
@@ -428,9 +461,8 @@ custom.textContent = 'custom';
 sel.appendChild(custom);
 sel.addEventListener('change', () => {
   if (sel.value === 'custom') return;
-  const n = cloneState(state);
+  const n = withVals(state, activeColor().id, presetValues(sel.value));
   n.preset = sel.value;
-  n.vals = presetValues(sel.value);
   commit(n);
 });
 

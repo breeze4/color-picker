@@ -82,7 +82,44 @@ test('free mode hash round trip', async () => {
   const { toFree } = await import('../js/palette.js');
   const f = toFree({ ...defaultState(), hue: 10, model: 'analog', compl: true });
   f.hues.sec2 = null;
+  f.valsBy.sec2 = null;
   const back = hashToState(stateToHash(f));
   assert.deepEqual(back, f);
   assert.match(stateToHash(f), /&f=40,_,190&/);
+});
+
+test('free mode gives each color its own shade set', async () => {
+  const { toFree, toModel, withVals, valsFor, withCompl } = await import('../js/palette.js');
+  const s = { ...defaultState(), hue: 10, model: 'analog', compl: true };
+  const f = toFree(s);
+  // entering free mode copies the shared set to every present color
+  assert.deepEqual(f.valsBy.sec1, s.vals);
+  assert.deepEqual(f.valsBy.compl, s.vals);
+  assert.notEqual(f.valsBy.sec1, f.vals);
+  // one color changes alone
+  const custom = [[1, 1], [0.5, 1], [0.7, 1], [1, 0.7], [1, 0.4]];
+  const m = withVals(f, 'sec1', custom);
+  assert.deepEqual(valsFor(m, 'sec1'), custom);
+  assert.deepEqual(valsFor(m, 'pri'), s.vals);
+  assert.deepEqual(valsFor(m, 'sec2'), s.vals);
+  const colors = Object.fromEntries(schemeColors(m).map((c) => [c.id, c]));
+  assert.notEqual(colors.sec1.shades[0].hex, colors.pri.shades[0].hex.replace('x', 'y'));
+  assert.equal(colors.sec1.shades[0].hex, schemeColors({ ...m, vals: custom }).find((c) => c.id === 'sec1').shades[0].hex);
+  // the primary set is the shared one
+  const p = withVals(m, 'pri', custom);
+  assert.deepEqual(p.vals, custom);
+  assert.deepEqual(valsFor(p, 'sec2'), s.vals);
+  // outside free mode a change is shared
+  const shared = withVals(s, 'sec1', custom);
+  assert.deepEqual(shared.vals, custom);
+  assert.equal(shared.valsBy, null);
+  // removing and adding the complement resets its set from the primary
+  const noc = withCompl(m, false);
+  assert.equal(noc.valsBy.compl, null);
+  assert.deepEqual(withCompl(noc, true).valsBy.compl, s.vals);
+  // locking drops the per-color sets
+  assert.equal(toModel(m, 'triad').valsBy, null);
+  // hash round trip keeps the sets
+  assert.deepEqual(hashToState(stateToHash(m)), m);
+  assert.match(stateToHash(m), /&w1=1,1;0.5,1;/);
 });
