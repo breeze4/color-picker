@@ -134,6 +134,17 @@ main {
   opacity: 0.9;
 }
 
+.preview {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 1;
+  margin: 0 auto 16px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.preview div { position: absolute; }
+
 .strip { display: flex; height: 40px; border-radius: 6px; overflow: hidden; margin-bottom: 16px; }
 .strip div { flex: 1; }
 

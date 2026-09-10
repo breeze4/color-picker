@@ -27,6 +27,9 @@ browsers block ES modules on `file://` URLs.
 4. Click **Export** and then **Copy** to get the palette as Markdown,
    CSS, or JSON. Click any swatch to copy its hex.
 
+The square above the swatches shows the scheme colors together, the
+same way the paletton.com preview does.
+
 The URL holds the whole palette. Copy the URL to save or share it.
 
 ## Test

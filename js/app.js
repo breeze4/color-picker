@@ -139,9 +139,42 @@ function drawWheel() {
   }
 }
 
+// ---------- preview box ----------
+// Layout copied from Paletton's preview: a 360 unit square with four
+// quadrants. Each quadrant is one hue's main shade with the other four
+// shades as small squares. Numbers are in 360ths of the box.
+const PREVIEW = [
+  { id: 'pri', box: [0, 0, 216, 216], vars: [[130, 10, 50], [70, 10, 50], [10, 70, 50], [10, 130, 50]] },
+  { id: 'sec1', box: [216, 0, 144, 216], vars: [[104, 10, 30], [104, 50, 30], [104, 90, 30], [104, 130, 30]] },
+  { id: 'sec2', box: [0, 216, 216, 144], vars: [[10, 104, 30], [50, 104, 30], [90, 104, 30], [130, 104, 30]] },
+  { id: 'compl', box: [216, 216, 144, 144], vars: [[24, 104, 30], [64, 104, 30], [104, 64, 30], [104, 24, 30]] },
+];
+
+function renderPreview(colors) {
+  const byId = Object.fromEntries(colors.map((c) => [c.id, c]));
+  const pct = (n) => `${(n / 360) * 100}%`;
+  const el = $('preview');
+  el.innerHTML = '';
+  for (const q of PREVIEW) {
+    const c = byId[q.id] ?? byId.pri;
+    const [x, y, w, h] = q.box;
+    const box = document.createElement('div');
+    box.style.cssText = `left:${pct(x)};top:${pct(y)};width:${pct(w)};height:${pct(h)};background:${c.shades[0].hex}`;
+    box.title = c.label;
+    q.vars.forEach(([vx, vy, vs], i) => {
+      const v = document.createElement('div');
+      v.style.cssText = `left:${(vx / w) * 100}%;top:${(vy / h) * 100}%;width:${(vs / w) * 100}%;height:${(vs / h) * 100}%;background:${c.shades[i + 1].hex}`;
+      v.title = `${c.label} ${i + 1}`;
+      box.appendChild(v);
+    });
+    el.appendChild(box);
+  }
+}
+
 // ---------- palette panel ----------
 function renderPalette() {
   const colors = schemeColors(state);
+  renderPreview(colors);
   const strip = $('strip');
   strip.innerHTML = '';
   for (const c of colors) {
