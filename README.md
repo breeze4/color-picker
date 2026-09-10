@@ -42,8 +42,8 @@ scripts/ci-gates.sh
    button to lock the hues again.
 3. Drag the numbered dots inside the wheel to set the five shades. Dot 0
    moves all five. Or pick a preset from the **Shades** list.
-   In Free mode, click a color name on the right to edit that color's
-   own shades.
+   The chips above the inner disc pick which color the dots edit. In
+   Free mode each color keeps its own shades.
 4. Click **Export** and then **Copy** to get the palette as Markdown,
    CSS, or JSON. Click any swatch to copy its hex.
 

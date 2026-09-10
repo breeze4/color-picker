@@ -3,7 +3,7 @@ import { PRESETS, presetValues } from './presets.js';
 import { valToPoint, pointToVal, limitToDisc } from './field.js';
 import {
   SCHEME_MODELS, defaultState, cloneState, schemeHues, schemeColors, withAngle,
-  toFree, toModel, withHue, withFreeHue, withCompl, valsFor, withVals, exportMarkdown, exportCss, exportJson, stateToHash, hashToState, MIN_ANGLE, MAX_ANGLE,
+  toFree, toModel, withHue, withFreeHue, withCompl, valsFor, withVals, LABELS, exportMarkdown, exportCss, exportJson, stateToHash, hashToState, MIN_ANGLE, MAX_ANGLE,
 } from './palette.js';
 
 // ---------- state and history ----------
@@ -33,9 +33,13 @@ const ctx = canvas.getContext('2d');
 const SIZE = canvas.width;
 const C = SIZE / 2;
 const R_OUT = C - 2;
-const R_IN = C * 0.74;
+// The disc keeps its size. The ring sits farther out so a row of color
+// chips fits in the band between them.
+const R_DISC = 141;
+const R_IN = 185;
 const R_MID = (R_OUT + R_IN) / 2;
-const R_DISC = C * 0.64;
+const R_CHIP = (R_DISC + R_IN) / 2;
+const CHIP_R = 8;
 
 const hueToRad = (h) => ((h - 90) * Math.PI) / 180;
 const posOnRing = (h) => ({ x: C + R_MID * Math.cos(hueToRad(h)), y: C + R_MID * Math.sin(hueToRad(h)) });
@@ -138,6 +142,31 @@ function activeColor() {
   return c;
 }
 
+// Chip positions on an arc at the top of the band, one per scheme color.
+function chipPositions() {
+  const hues = schemeHues(state);
+  const step = 8;
+  return hues.map((h, i) => {
+    const a = ((-90 + (i - (hues.length - 1) / 2) * step) * Math.PI) / 180;
+    return { ...h, x: C + R_CHIP * Math.cos(a), y: C + R_CHIP * Math.sin(a) };
+  });
+}
+
+function drawChips(act) {
+  const chips = chipPositions();
+  if (chips.length < 2) return;
+  for (const ch of chips) {
+    const main = valsFor(state, ch.id)[0];
+    if (ch.id === act.id) {
+      ctx.beginPath();
+      ctx.arc(ch.x, ch.y, CHIP_R + 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#e0b34a';
+      ctx.fill();
+    }
+    dot(ch.x, ch.y, CHIP_R, toHex(shade(ch.hue, main[0], main[1]).rgb), false);
+  }
+}
+
 function drawWheel() {
   ctx.clearRect(0, 0, SIZE, SIZE);
   ctx.drawImage(drawRing(), 0, 0);
@@ -145,6 +174,7 @@ function drawWheel() {
   const vals = valsFor(state, act.id);
   const disc = drawDisc(act.hue);
   ctx.drawImage(disc, C - disc.width / 2, C - disc.height / 2);
+  drawChips(act);
 
   // Lines from the center to each hue on the ring.
   const hues = schemeHues(state);
@@ -308,6 +338,9 @@ function canvasXY(ev) {
 }
 
 function hitTest(x, y) {
+  for (const ch of chipPositions()) {
+    if (Math.hypot(ch.x - x, ch.y - y) <= CHIP_R + 4) return { kind: 'chip', id: ch.id };
+  }
   const vals = valsFor(state, activeColor().id);
   for (let i = 0; i < 5; i++) {
     const p = discPos(vals[i]);
@@ -340,6 +373,7 @@ canvas.addEventListener('pointerdown', (ev) => {
   const hit = hitTest(x, y);
   if (!hit) return;
   ev.preventDefault();
+  if (hit.kind === 'chip') { active = hit.id; render(); return; }
   canvas.setPointerCapture(ev.pointerId);
   drag = { ...hit, start: cloneState(state), pointer: hit.kind === 'disc' ? limitToDisc(...Object.values(discPoint(x, y))) : null };
   hotIndex = hit.kind === 'disc' ? hit.index : -1;
@@ -351,6 +385,9 @@ canvas.addEventListener('pointermove', (ev) => {
   const { x, y } = canvasXY(ev);
   if (drag) return moveDrag(x, y);
   const hit = hitTest(x, y);
+  const chip = hit && hit.kind === 'chip' ? schemeHues(state).find((h) => h.id === hit.id) : null;
+  canvas.style.cursor = chip ? 'pointer' : '';
+  canvas.title = chip ? `Edit ${LABELS[chip.id]} shades` : '';
   const av = valsFor(state, activeColor().id);
   const idx = hit && hit.kind === 'disc' && Math.hypot(discPos(av[hit.index]).x - x, discPos(av[hit.index]).y - y) <= 14 ? hit.index : -1;
   if (idx !== hotIndex) { hotIndex = idx; setHot(); }
