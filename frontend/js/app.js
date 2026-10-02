@@ -1,5 +1,6 @@
 import { normHue, shade, toHex, fromHex, rgbToHsv, baseByHue, kFor, textOn } from './color.js';
 import { PRESETS, presetValues } from './presets.js';
+import { copyText } from './copy.js';
 import { valToPoint, pointToVal, limitToDisc } from './field.js';
 import {
   SCHEME_MODELS, defaultState, cloneState, schemeHues, schemeColors, withAngle,
@@ -279,7 +280,7 @@ function renderPalette() {
       idx.textContent = i;
       b.appendChild(idx);
       b.title = 'Click to copy';
-      b.addEventListener('click', () => copyText(sh.hex, b));
+      b.addEventListener('click', () => copySwatch(sh.hex, b));
       sw.appendChild(b);
     });
     row.appendChild(sw);
@@ -287,21 +288,16 @@ function renderPalette() {
   }
 }
 
-async function copyText(text, el) {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    ta.remove();
-  }
-  if (el) {
-    el.classList.add('copied');
-    setTimeout(() => el.classList.remove('copied'), 900);
-  }
+// Marks el with `copied` or `copy-failed` for a moment.
+function flashCopy(el, ok, ms) {
+  el.classList.remove('copied', 'copy-failed');
+  el.classList.add(ok ? 'copied' : 'copy-failed');
+  clearTimeout(el._copyTimer);
+  el._copyTimer = setTimeout(() => el.classList.remove('copied', 'copy-failed'), ms);
+}
+
+async function copySwatch(hex, el) {
+  flashCopy(el, await copyText(hex), 900);
 }
 
 // ---------- controls ----------
@@ -632,7 +628,20 @@ document.querySelectorAll('[data-format]').forEach((b) => {
   b.addEventListener('click', () => { format = b.dataset.format; renderExport(); });
 });
 $('btn-close').addEventListener('click', () => dlg.close());
-$('btn-copy').addEventListener('click', () => copyText(exportText(), $('btn-copy')));
+const btnCopy = $('btn-copy');
+btnCopy.addEventListener('click', async () => {
+  const ok = await copyText(exportText());
+  btnCopy.textContent = ok ? 'Copied' : 'Press Ctrl+C to copy';
+  flashCopy(btnCopy, ok, ok ? 1200 : 4000);
+  // When every copy path fails, select the text so the keyboard shortcut works.
+  if (!ok) {
+    const ta = $('export-text');
+    ta.focus();
+    ta.select();
+  }
+  clearTimeout(btnCopy._labelTimer);
+  btnCopy._labelTimer = setTimeout(() => { btnCopy.textContent = 'Copy'; }, ok ? 1200 : 4000);
+});
 dlg.addEventListener('click', (ev) => { if (ev.target === dlg) dlg.close(); });
 
 window.addEventListener('hashchange', () => {

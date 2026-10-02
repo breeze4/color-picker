@@ -182,7 +182,8 @@ main {
   border-radius: 4px;
   padding: 1px 5px;
 }
-.swatch.copied::after {
+.swatch.copied::after,
+.swatch.copy-failed::after {
   content: "copied";
   position: absolute;
   top: 6px;
@@ -190,6 +191,8 @@ main {
   font-size: 11px;
   opacity: 0.9;
 }
+.swatch.copy-failed::after { content: "copy failed"; }
+button.primary.copy-failed { background: #e0a040; border-color: #e0a040; }
 
 .preview {
   position: relative;
