@@ -25,3 +25,23 @@
   name killed the user's own reload server. Start test servers on a
   port the user does not use, keep the process ID, and stop only that
   ID. A reload server does not need a restart after edits.
+
+## 2026-10-01 — Export copy on Chromebook
+
+- Lesson: While a `<dialog>` is open through `showModal()`, everything
+  outside it is inert. A temporary textarea appended to `document.body`
+  can't take focus or a selection, so `execCommand('copy')` copies an
+  empty selection and still returns `true`. Put the temporary element
+  inside the open dialog, and check focus and selection before you count
+  the copy as a success.
+- Lesson: Never show a success state without checking the result. The
+  Copy button got `copied` on every click, and the class had no style,
+  so the operator saw no signal either way.
+- Lesson: To reproduce a clipboard fallback in headless Chromium, grant
+  `clipboard-read` and `clipboard-write`, seed the clipboard with a
+  marker, override `navigator.clipboard.writeText` to reject, then read
+  the clipboard back. An unchanged marker proves that nothing was copied.
+- Lesson: The rule against `pkill -f` applies to your own commands too.
+  A `pkill -f "http.server PORT"` in a compound command matched its own
+  shell and stopped the whole command. Keep the background task ID and
+  stop only that task.
