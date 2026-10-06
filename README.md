@@ -36,6 +36,9 @@ To run the backend and frontend tests, run:
 scripts/ci-gates.sh
 ```
 
+Woodpecker runs the same script on each push and pull request, as
+`.woodpecker/check.yaml` declares.
+
 ## Use
 
 1. Click a scheme: **Mono**, **Analog**, **Triad**, or **Tetrad**.
