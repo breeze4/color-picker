@@ -30,14 +30,21 @@ to use another port.
 
 ## Test
 
-To run the backend and frontend tests, run:
+To run the workflow check, the backend and frontend tests, and the
+deployment contract check, run:
 
 ```
 scripts/ci-gates.sh
 ```
 
-Woodpecker runs the same script on each push and pull request, as
-`.woodpecker/check.yaml` declares.
+To run the same gate in the pinned BeeBaby CI image, run
+`sh scripts/ci-local.sh all`.
+
+The `.woodpecker/` workflows come from the BeeBaby CI template in
+`beebaby-infra`. A pull request runs `check.yaml`, which runs the gate,
+and `build-image.yaml`, which builds the image with no secret and pushes
+nothing. A push to `main` runs the same two workflows, then
+`publish.yaml` pushes the image and `deploy.yaml` deploys it.
 
 ## Use
 

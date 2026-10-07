@@ -31,8 +31,30 @@ grep -Fq 'ghcr.io/breeze4/beebaby-ci@sha256:' "$root/.woodpecker/check.yaml"
 grep -Fq 'woodpeckerci/plugin-docker-buildx@sha256:ccb9072d4f51dc6ec106b364c6806c6647c93c59594f2d10d121f94b0566591f' "$root/.woodpecker/publish.yaml"
 if grep -Fq 'privileged:' "$root/.woodpecker/publish.yaml"; then exit 1; fi
 
-# The workflows run in order: check, then publish, then deploy.
+# The workflows run in order: check and build-image, then publish, then deploy.
 grep -Fqx '  - check' "$root/.woodpecker/publish.yaml"
+grep -Fqx '  - build-image' "$root/.woodpecker/publish.yaml"
 grep -Fqx '  - publish' "$root/.woodpecker/deploy.yaml"
+
+# Pull requests and main run the same build-image step. It builds with no
+# secret and pushes nothing.
+grep -Fqx '  - event: pull_request' "$root/.woodpecker/build-image.yaml"
+grep -Fqx '      dry_run: true' "$root/.woodpecker/build-image.yaml"
+if grep -Fq 'from_secret' "$root/.woodpecker/build-image.yaml"; then exit 1; fi
+
+# Every workflow declares a location label, because a workflow without one
+# matches every agent. A workflow that uses a secret runs only on beebaby, so
+# no agent off the host receives the secret.
+for workflow in "$root"/.woodpecker/*.yaml; do
+  location=$(awk '/^labels:/ { getline; if ($1 == "location:") print $2; exit }' "$workflow")
+  case "$location" in
+    beebaby|cloud) ;;
+    *) printf 'check-deployment: %s has no location label\n' "$workflow" >&2; exit 1 ;;
+  esac
+  if grep -Fq 'from_secret' "$workflow" && [ "$location" != beebaby ]; then
+    printf 'check-deployment: %s uses a secret without location: beebaby\n' "$workflow" >&2
+    exit 1
+  fi
+done
 
 printf 'check-deployment: color-picker meets the static service-side contract\n'

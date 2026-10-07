@@ -45,3 +45,16 @@
   A `pkill -f "http.server PORT"` in a compound command matched its own
   shell and stopped the whole command. Keep the background task ID and
   stop only that task.
+
+## 2026-10-07 — Move to the BeeBaby CI template
+
+- Lesson: Before you re-stamp a pipeline, compare the template's check
+  image digest with the `ci_image` pin in cloud-agents
+  `config/pins.yaml`. On this date the `beebaby-infra` template still
+  named `beebaby-ci@sha256:01586a4e…`, and the cloud-agents pin named the
+  newer `sha256:10387c6d…`, which the worker image builds on. A plain
+  re-stamp moves the check back to the older image.
+- Lesson: `stamp-ci.py` never overwrites a file. To re-stamp, delete the
+  workflows and `scripts/ci-gates.sh` first, run the stamper, and then
+  move the old project checks into `gate_project`. A diff against the
+  deleted files shows that the deploy command doesn't change.
